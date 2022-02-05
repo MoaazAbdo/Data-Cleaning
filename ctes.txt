@@ -1,0 +1,40 @@
+
+https://csharp-video-tutorials.blogspot.com/2012/09/recursive-cte-part-51.html
+
+
+;WITH cte1
+AS(
+SELECT CONVERT(DATE,'2020-1-1') AS d
+UNION ALL
+SELECT DATEADD(MONTH,1,c.d)
+FROM cte1 c
+where c.d < DATEADD(month,-2,GETDATE())
+)
+INSERT INTO [Test].dbo.LeadTimeMonthYear
+(m,y,FirstDay,IsDone)
+select m,y,CONCAT(y,'-',m,'-1') as FirstDay,IsDone from (
+SELECT DATEPART(MONTH,s.d) AS m,DATEPART(YEAR,s.d) AS y,0 as IsDone
+FROM cte1 s
+left join [Test].dbo.LeadTimeMonthYear t on t.y = DATEPART(YEAR,s.d) and t.m = DATEPART(MONTH,s.d)
+where t.m is null
+) as r
+------------------------------------------
+;WITH cte2
+AS(
+SELECT DATEADD(DAY,-100,GETDATE()) as d
+UNION ALL
+SELECT DATEADD(DAY,1,c.d)
+FROM cte2 c
+where c.d < GETDATE()
+)
+INSERT INTO [Test].dbo.LeadTimeWeekYear
+(w,y,FirstDay,IsDone)
+select w,y,CONCAT(y,'-',m,'-',d) as FirstDay ,0 as IsDone from (
+select y,m,w,d, ROW_NUMBER() OVER(partition by y,w order by m,d ) as RN
+from (
+SELECT DATEPART(day,s.d) AS d,DATEPART(week,s.d) AS w,DATEPART(month,s.d) AS m,DATEPART(YEAR,s.d) AS y
+FROM cte2 s
+left join [Test].dbo.LeadTimeWeekYear t on t.y = DATEPART(YEAR,s.d) and t.w = DATEPART(week,s.d)
+where t.w is null
+) as r
+) h where h.RN = 1
